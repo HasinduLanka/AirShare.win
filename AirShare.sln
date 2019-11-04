@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29409.12
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AirShare.core", "AirShare.core\AirShare.core.csproj", "{FFA5FA4B-3894-4C55-8AAB-B1FD307140D6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AirShare.Windows", "AirShare.Windows\AirShare.Windows.csproj", "{FF1484C0-7B99-4053-9EF5-663BD7291171}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FFA5FA4B-3894-4C55-8AAB-B1FD307140D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FFA5FA4B-3894-4C55-8AAB-B1FD307140D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FFA5FA4B-3894-4C55-8AAB-B1FD307140D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FFA5FA4B-3894-4C55-8AAB-B1FD307140D6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FF1484C0-7B99-4053-9EF5-663BD7291171}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FF1484C0-7B99-4053-9EF5-663BD7291171}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FF1484C0-7B99-4053-9EF5-663BD7291171}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FF1484C0-7B99-4053-9EF5-663BD7291171}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7FAADF71-02A0-4761-8F4E-EF223B4FB083}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <RootNamespace>AirShare</RootNamespace>
+    <ApplicationIcon />
+    <StartupObject>AirShare.Program</StartupObject>
+    <Authors>Hasindu Lanka</Authors>
+    <Company>TrailBlazers</Company>
+    <Product>AirShare</Product>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>AirShare.pfx</AssemblyOriginatorKeyFile>
+    <DelaySign>false</DelaySign>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PlatformTarget>x86</PlatformTarget>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
+  </ItemGroup>
+
+</Project>
