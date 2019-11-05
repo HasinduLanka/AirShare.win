@@ -237,6 +237,7 @@ namespace AirShare
                     'P' => obj.ToObject<Ping>(),
                     'R' => obj.ToObject<Request>(),
                     'r' => obj.ToObject<Response>(),
+                    'X' => obj.ToObject<ContentTransmit>(),
                     _ => null,
                 };
             }
@@ -337,6 +338,20 @@ namespace AirShare
                     return false;
                 }
 
+            }
+            else if (t is ContentTransmit ct)
+            {
+                switch (ct.c)
+                {
+                    case ContentTransmit.Command.none:
+                        break;
+                    case ContentTransmit.Command.msg:
+                        Log($" {ct.nm} >> {ct.content} \t ({ct.ip}:{ct.port} -> {ip}:{port}) ");
+                        break;
+                    default:
+                        break;
+                }
+                return true;
             }
             else
             {
@@ -531,6 +546,25 @@ namespace AirShare
             {
                 return null;
             }
+        }
+
+
+        public void SendMsg(string s, Client client)
+        {
+
+            string addrPort = client.ip + ":" + client.port;
+
+            while (HotPeers[addrPort])
+            {
+                Sleep(100);
+            }
+
+            HotPeers[addrPort] = true;
+
+            ContentTransmit ct = new ContentTransmit() { c = ContentTransmit.Command.msg, ip = ip, port = port, time = DateTime.Now.ToBinary(), nm = name, content = s };
+            WriteToPeer(ct, client.ns);
+
+            HotPeers[addrPort] = false;
         }
 
     }

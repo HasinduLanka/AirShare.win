@@ -2,7 +2,7 @@
 
 
 [Serializable]
-public  class Transmit
+public class Transmit
 {
     public char t = 't';
     public string ip; //IP of Client
@@ -44,5 +44,23 @@ public class Response : Transmit
     public enum Status : byte
     {
         none, ok, retry, pingReq, failed, reconnect
+    }
+}
+
+
+
+[Serializable]
+public class ContentTransmit : Transmit
+{
+    public new char t = 'X';
+    public int port; //Listening Peer port
+    public string nm;
+    public string content;
+    public Command c = Command.none;
+    public long length = 0;
+
+    public enum Command : byte
+    {
+        none, msg
     }
 }

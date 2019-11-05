@@ -66,6 +66,14 @@ namespace AirShare
                 Core.Sleep(1000);
                 peer3.ScanIP("127.0.0.1");
             }
+            else if (s.StartsWith("/"))
+            {
+                foreach (var cl in peer1.clients)
+                {
+                    peer1.SendMsg(s.Substring(1), cl);
+                }
+
+            }
 
             goto Begin;
 
