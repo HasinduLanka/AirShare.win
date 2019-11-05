@@ -10,7 +10,7 @@ namespace AirShare
 {
     public class Peer
     {
-        public int StartingPort = 26261;
+        public int StartingPort = 49611;
 
         public string ip;
         public int port;
@@ -18,6 +18,7 @@ namespace AirShare
 
         public List<Client> clients = new List<Client>();
         public Dictionary<string, Client> clientIPs = new Dictionary<string, Client>();
+        public Dictionary<string, bool> HotPeers = new Dictionary<string, bool>();
 
         public System.Timers.Timer responder = new System.Timers.Timer(300);
 
@@ -25,7 +26,7 @@ namespace AirShare
 
         public Peer()
         {
-            ip = GetLocalIPAddress();
+            ip = "127.0.0.1";//GetLocalIPAddress();
             port = StartingPort;
             name = Environment.UserName;
         }
@@ -70,7 +71,7 @@ namespace AirShare
             }
 
 
-            Log($"Listening on port {port}...");
+            Log($"@{ip} Listening on port {port}...");
 
             new System.Threading.Thread(new System.Threading.ThreadStart(ThrListen)) { Name = $"Listen {port}" }.Start();
 
@@ -85,7 +86,7 @@ namespace AirShare
 
                 Client client = new Client() { tcp = tcpclient, ns = tcpclient.GetStream() };
 
-                Log($"Client Accepted. Handle {client.tcp.Client.Handle.ToInt64()}");
+                Log($"@{port} Client Accepted. Handle {client.tcp.Client.Handle.ToInt64()}");
 
 
                 if (client.tcp.Connected)  //while the client is connected, we look for incoming messages
@@ -97,28 +98,36 @@ namespace AirShare
 
                         if (tr != null)
                         {
-                            Log($"First transmition recieved from {tr.ip} {tr.ToString()}");
+                            string addr = ((IPEndPoint)client.tcp.Client.RemoteEndPoint).Address.ToString();
+                            Log($"First transmition recieved from {addr} {tr.ToString()}");
+                            // int prt = ((IPEndPoint)client.tcp.Client.RemoteEndPoint).Port;
+                            tr.ip = addr;
                             Ping ping = (Ping)tr;
                             if (ping != null)
                             {
-
-                                if (!clientIPs.ContainsKey(ping.ip + ":" + ping.port.ToString()))
+                                string addrPort = addr + ":" + ping.port;
+                                if (clientIPs.TryGetValue(addrPort, out Client client1))
+                                {
+                                    client = client1;
+                                }
+                                else
                                 {
                                     //New client
 
                                     lock (clients)
                                     {
-                                        client.ip = ping.ip;
+                                        client.ip = addr;
+                                        client.port = ping.port;
                                         client.LastTime = DateTime.Now;
                                         clients.Add(client);
-                                        clientIPs.Add(ping.ip + ":" + ping.port.ToString(), client);
-
+                                        clientIPs.Add(addrPort, client);
+                                        HotPeers[addrPort] = false;
                                     }
                                 }
 
                                 if (Respond(tr))
                                 {
-                                    Log($"New client added. Name {client.name}, IP {client.ip}:{client.port}");
+                                    Log($"@{port} New client added. Name {client.name}, IP {client.ip}:{client.port}", ConsoleColor.Cyan);
                                     connected = true;
                                 }
                                 else
@@ -161,27 +170,60 @@ namespace AirShare
             int tries = 0;
             ReadAgain:
 
+            for (int i = 1; i < 10; i++)
+            {
+                if (ns.DataAvailable)
+                {
+                    goto ReadNow;
+                }
+                else
+                {
+                    Sleep(500);
+                }
+            }
+            ns.Flush();
+            return null;
+
+            ReadNow:
             start = ns.ReadByte();
             if (start == -1)
             {
-                if (tries > 10) { Log("@ReadFromPeer : StartByte time out"); return null; }
+                if (tries > 4) { Log("@ReadFromPeer : StartByte time out"); return null; }
                 tries++;
                 System.Threading.Thread.Sleep(100);
                 goto ReadAgain;
             }
-            if (start != 0b101010)
+            if (start != 42)
             {
-                Log("@ReadFromPeer : StartByte is wrong");
+
+                Log($"@{port}ReadFromPeer : StartByte is wrong");
+                ns.Flush();
                 return null;
             }
 
-            ns.WriteByte(0b101011);
+            // ns.WriteByte(43);
 
 
-            byte[] lengthBytes = new byte[start];
+            for (int i = 1; i < 10; i++)
+            {
+                if (ns.DataAvailable)
+                {
+                    goto ReadLenght;
+                }
+                else
+                {
+                    Sleep(500);
+                }
+            }
+            ns.Flush();
+            return null;
+
+            ReadLenght:
+            byte[] lengthBytes = new byte[4];
             ns.Read(lengthBytes, 0, 4);
 
             Int32 length = BitConverter.ToInt32(lengthBytes, 0);
+
 
             byte[] transmitBytes = new byte[length];
             ns.Read(transmitBytes, 0, length);
@@ -200,7 +242,15 @@ namespace AirShare
             }
             catch (Exception ex)
             {
-                LogErr(ex, "Cannot DeserializeObject from client");
+                LogErr(ex, $"Cannot DeserializeObject from client");
+                try
+                {
+                    Log($"Recieved string is {Encoding.Unicode.GetString(transmitBytes)}", ConsoleColor.Yellow);
+                }
+                catch (Exception)
+                {
+                    Log("Cannot convert recieved bytes into string", ConsoleColor.Red);
+                }
                 return null;
             }
 
@@ -210,26 +260,7 @@ namespace AirShare
 
         public void WriteToPeer(Transmit tr, NetworkStream ns)
         {
-            ns.WriteByte(0b101010);
-
-            int start;
-            int tries = 0;
-            ReadAgain:
-
-            start = ns.ReadByte();
-            if (start == -1)
-            {
-                if (tries > 10) return;
-                tries++;
-                System.Threading.Thread.Sleep(100);
-                goto ReadAgain;
-            }
-            else if (start != 0b101011)
-            {
-                return;
-            }
-
-
+            ns.WriteByte(42);
 
 
             byte[] bytes = System.Text.Encoding.Unicode.GetBytes(Newtonsoft.Json.JsonConvert.SerializeObject(tr));
@@ -250,10 +281,29 @@ namespace AirShare
             while (n < clients.Count)
             {
                 var client = clients[n];
-                Transmit t = ReadFromPeer(client.ns);
-                if (t != null)
+                string adrpt = $"{client.ip}:{client.port}";
+                if (!HotPeers[adrpt])
                 {
-                    Respond(t);
+                    HotPeers[adrpt] = true;
+                    try
+                    {
+                        if (client.ns.DataAvailable)
+                        {
+                            Transmit t = ReadFromPeer(client.ns);
+                            if (t != null)
+                            {
+                                Respond(t);
+                                Sleep(20);
+                            }
+                        }
+                        HotPeers[adrpt] = false;
+                    }
+                    catch (Exception)
+                    {
+                        HotPeers[adrpt] = false;
+                        Responding = false;
+                        throw;
+                    }
                 }
 
                 n++;
@@ -276,7 +326,6 @@ namespace AirShare
                 {
                     client.LastTime = DateTime.Now;
                     client.name = ping.nm;
-                    client.port = ping.port;
 
                     WriteToPeer(new Response() { ip = ip, time = DateTime.Now.ToBinary(), stat = Response.Status.ok, port = port, nm = name }, client.ns);
 
@@ -310,7 +359,7 @@ namespace AirShare
                             string addr = ip.Address.ToString();
                             Log($"IP found {addr}");
 
-                            new System.Threading.Thread(new System.Threading.ParameterizedThreadStart(ScanIP)) { Name = $"Scan {addr}" }.Start(addr);
+                            ScanIP(addr);
                         }
                     }
                 }
@@ -318,18 +367,31 @@ namespace AirShare
 
         }
 
-        private void ScanIP(object obj)
+        public void ScanIP(string addr)
+        {
+            new System.Threading.Thread(new System.Threading.ParameterizedThreadStart(ThrScanIP)) { Name = $"Scan {addr}" }.Start(addr);
+        }
+
+        private void ThrScanIP(object obj)
         {
             string addr = (string)obj;
-            for (int p = StartingPort; p < StartingPort + 1; p++)
+            for (int p = StartingPort; p < StartingPort + 3; p++)
             {
-                if (PingIP(addr, p))
+                if (!(addr == ip && p == port))
                 {
-                    Log($"Client connected {addr}:{p}");
+                    if (PingIP(addr, p))
+                    {
+                        Log($"Client connected @{port} {addr}:{p}");
+                        Sleep(50);
+                    }
+                    else
+                    {
+                        // Log($"Client connection failed {addr}:{p}");
+                    }
                 }
                 else
                 {
-                    Log($"Client connection failed {addr}:{p}");
+                    Log($"Skip scanning myself {addr}:{p}", ConsoleColor.Yellow);
                 }
             }
         }
@@ -343,14 +405,32 @@ namespace AirShare
         }
 
 
-        public bool PingIP(string address, int port)
+        public bool PingIP(string address, int p)
         {
             TcpClient tcpclient;
             NetworkStream ns;
             bool ClientExists = false;
 
-            if (clientIPs.TryGetValue(address + ":" + port, out Client oldClient))
+            if (address == ip && p == port)
             {
+                Log($"Skip Pinging myself {address}:{p}", ConsoleColor.Yellow);
+                return false;
+            }
+
+            string addrPort = address + ":" + p;
+
+
+
+            if (clientIPs.TryGetValue(addrPort, out Client oldClient))
+            {
+
+                while (HotPeers[addrPort])
+                {
+                    Sleep(100);
+                }
+
+                HotPeers[addrPort] = true;
+
                 tcpclient = oldClient.tcp;
                 ns = oldClient.ns;
                 ClientExists = true;
@@ -359,7 +439,7 @@ namespace AirShare
             {
                 try
                 {
-                    tcpclient = new TcpClient(address, port);
+                    tcpclient = new TcpClient(address, p);
                     ns = tcpclient.GetStream();
                 }
                 catch (SocketException)
@@ -386,18 +466,26 @@ namespace AirShare
                 {
                     oldClient.LastTime = DateTime.Now;
                     oldClient.name = resp.nm;
-                    oldClient.port = resp.port;
 
+                    HotPeers[addrPort] = false;
                     return true;
                 }
                 else
                 {
                     lock (clients)
                     {
-                        if (resp.ip == ip) return false;
-                        Client client = new Client() { tcp = tcpclient, ns = ns, ip = resp.ip, name = resp.nm, port = resp.port, LastTime = DateTime.Now };
+                        if (clientIPs.ContainsKey(addrPort))
+                        {
+                            HotPeers[addrPort] = false;
+                            return true;
+                        }
+
+                        Client client = new Client() { tcp = tcpclient, ns = ns, ip = address, name = resp.nm, port = resp.port, LastTime = DateTime.Now };
                         clients.Add(client);
-                        clientIPs.Add(client.ip + ":" + client.port, client);
+                        clientIPs.Add(addrPort, client);
+                        HotPeers[addrPort] = false;
+
+                        Log($"@{port} Ping New client added. Name {client.name}, IP {client.ip}:{client.port}", ConsoleColor.Cyan);
 
                         return true;
                     }
@@ -405,8 +493,10 @@ namespace AirShare
 
             }
             else
+            {
+                HotPeers[addrPort] = false;
                 return false;
-
+            }
 
         }
 
@@ -414,6 +504,22 @@ namespace AirShare
         {
 
             WriteToPeer(new Ping() { ip = ip, port = port, time = DateTime.Now.ToBinary(), nm = name }, ns);
+
+            for (int i = 1; i < 10; i++)
+            {
+                if (ns.DataAvailable)
+                {
+                    goto ReadNow;
+                }
+                else
+                {
+                    Sleep(500);
+                }
+            }
+            ns.Flush();
+            return null;
+
+            ReadNow:
             var tr = ReadFromPeer(ns);
 
             if (tr == null) return null;

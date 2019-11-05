@@ -5,7 +5,9 @@ namespace AirShare
 {
     public class Program
     {
-        static Peer peer;
+        static Peer peer1;
+        static Peer peer2;
+        static Peer peer3;
         static void Main()
         {
             Console.WriteLine();
@@ -14,20 +16,24 @@ namespace AirShare
             Console.WriteLine("     -----------------------------        ");
             Console.WriteLine();
 
-            peer = new Peer();
-            peer.StartListener();
-            peer.Scan();
+            peer1 = new Peer();
+            peer1.StartListener();
+            //peer1.ScanIP("127.0.0.1");
 
 
             System.Threading.Thread.Sleep(2000);
 
 
-            Peer peer2 = new Peer();
+            peer2 = new Peer();
             peer2.StartListener();
-            peer2.Scan();
+            //peer3.Scan();
 
-            //Peer peer3 = new Peer();
-            //peer3.StartListener();
+
+            System.Threading.Thread.Sleep(2000);
+
+
+            peer3 = new Peer();
+            peer3.StartListener();
             //peer3.Scan();
 
             CLIRun();
@@ -44,18 +50,28 @@ namespace AirShare
             if (s == "")
             {
                 //Console.Clear();
-                ShowStatus();
+                ShowStatus(peer1);
+                ShowStatus(peer2);
+                ShowStatus(peer3);
             }
             else if (s == "p" || s == "ping")
             {
-                peer.PingAllClients();
+                peer1.PingAllClients();
+            }
+            else if (s == "s" || s == "scan")
+            {
+                peer1.ScanIP("127.0.0.1");
+                Core.Sleep(1000);
+                peer2.ScanIP("127.0.0.1");
+                Core.Sleep(1000);
+                peer3.ScanIP("127.0.0.1");
             }
 
             goto Begin;
 
         }
 
-        public static void ShowStatus()
+        public static void ShowStatus(Peer peer)
         {
             Console.WriteLine();
             Console.WriteLine("     -----------------------------        ");
@@ -70,12 +86,16 @@ namespace AirShare
             {
                 foreach (var c in peer.clients)
                 {
-                    clientStats += $"\t{c.name} on {c.ip}:{c.port} ~ {c.LastTime.ToShortTimeString()}\n";
+                    clientStats += $"\t{c.name} on {c.ip}:{c.port} ~ {c.LastTime.ToLongTimeString()}\n";
                 }
 
             }
 
             Console.WriteLine(clientStats);
+
+            Console.WriteLine();
+
+
         }
 
     }

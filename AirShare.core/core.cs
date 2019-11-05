@@ -9,26 +9,36 @@ namespace AirShare
 
         public static string monitor = "";
 
+        private static bool LogBusy = false;
         public static void Log(string s, ConsoleColor color = ConsoleColor.Green)
         {
+            WaitFor(ref LogBusy, 5);
+            LogBusy = true;
+
             Console.ForegroundColor = ConsoleColor.White;
             Console.Write(TimeStamp + "  ->  ");
             Console.ForegroundColor = color;
             Console.WriteLine(s);
             Console.ForegroundColor = ConsoleColor.Magenta;
+
+            LogBusy = false;
         }
 
 
         public static string Prompt(string s, ConsoleColor color = ConsoleColor.Green)
         {
+            WaitFor(ref LogBusy, 5);
+            LogBusy = true;
+
             Console.ForegroundColor = ConsoleColor.White;
             Console.WriteLine();
             Console.Write(TimeStamp + "  ->  ");
             Console.ForegroundColor = color;
-            Console.Write(s);
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.Write("  ->  ");
+            Console.WriteLine(s);
             Console.ForegroundColor = ConsoleColor.Magenta;
+
+            LogBusy = false;
+
             return Console.ReadLine();
         }
 
@@ -57,6 +67,13 @@ namespace AirShare
         public static void WaitFor(ref bool boolean, int checkIntervel = 50)
         {
             while (boolean)
+            {
+                System.Threading.Thread.Sleep(checkIntervel);
+            }
+        }
+        public static void WaitUntil(ref bool boolean, int checkIntervel = 50)
+        {
+            while (!boolean)
             {
                 System.Threading.Thread.Sleep(checkIntervel);
             }
